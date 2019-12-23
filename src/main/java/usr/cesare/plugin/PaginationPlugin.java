@@ -16,18 +16,32 @@ import usr.cesare.builder.MethodBuilder;
 import usr.cesare.builder.XmlElementBuilder;
 
 public class PaginationPlugin extends PluginAdapter {
+    private final String PageFromZeroProperty = "pageFromZero";
+    private final String DisablePaginationProperty = "disablePagination";
+
     private boolean pageFromZero = false;
+    private boolean enable = true;
 
     @Override
     public void setProperties(Properties properties) {
         super.setProperties(properties);
-        if (properties.getProperty("pageFromZero") != null) {
-            pageFromZero = Boolean.getBoolean(properties.getProperty("pageFromZero"));
+        if (properties.getProperty(PageFromZeroProperty) != null) {
+            pageFromZero = Boolean.getBoolean(properties.getProperty(PageFromZeroProperty));
+        }
+    }
+
+    @Override
+    public void initialized(IntrospectedTable introspectedTable) {
+        super.initialized(introspectedTable);
+        boolean disable = Boolean.parseBoolean(introspectedTable.getTableConfiguration().getProperty(DisablePaginationProperty));
+        if(disable){
+            this.enable = false;
         }
     }
 
     @Override
     public boolean modelExampleClassGenerated(TopLevelClass topLevelClass, IntrospectedTable introspectedTable) {
+        if (!enable) return super.modelExampleClassGenerated(topLevelClass, introspectedTable);
         // add field, getter, setter for limit clause
         addLimit(topLevelClass, introspectedTable, "page");
         addLimit(topLevelClass, introspectedTable, "rows");
@@ -46,6 +60,7 @@ public class PaginationPlugin extends PluginAdapter {
 
     @Override
     public boolean sqlMapSelectByExampleWithoutBLOBsElementGenerated(XmlElement element, IntrospectedTable introspectedTable) {
+        if (!enable) return super.sqlMapUpdateByExampleWithoutBLOBsElementGenerated(element, introspectedTable);
         element.addElement(
                 XmlElementBuilder.create("if")
                         .withAttribute("test", "offset >= 0 and rows >= 0")
